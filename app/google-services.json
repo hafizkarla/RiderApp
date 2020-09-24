@@ -1,0 +1,139 @@
+{
+  "project_info": {
+    "project_number": "494419129982",
+    "firebase_url": "https://multikurir-dacc8.firebaseio.com",
+    "project_id": "multikurir-dacc8",
+    "storage_bucket": "multikurir-dacc8.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:494419129982:android:bf552ce3a7f99c353c4a2f",
+        "android_client_info": {
+          "package_name": "com.kinikumuda.multikurir"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "494419129982-0m8c4f8dnlo87b05d24118viadlj04cj.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCOWTSyX59cqGrAgJKO1tzGE4rf2flw4Og"
+        },
+        {
+          "current_key": "AIzaSyA8-4j8h0sJHIc-tsusl4ct5W6yuDGmL_w"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "494419129982-0m8c4f8dnlo87b05d24118viadlj04cj.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:494419129982:android:ddd23c5a0cd3227f3c4a2f",
+        "android_client_info": {
+          "package_name": "com.kinikumuda.multikurir_driverapp"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "494419129982-0m8c4f8dnlo87b05d24118viadlj04cj.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCOWTSyX59cqGrAgJKO1tzGE4rf2flw4Og"
+        },
+        {
+          "current_key": "AIzaSyA8-4j8h0sJHIc-tsusl4ct5W6yuDGmL_w"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "494419129982-0m8c4f8dnlo87b05d24118viadlj04cj.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:494419129982:android:259e46f21600a0963c4a2f",
+        "android_client_info": {
+          "package_name": "com.kinikumuda.multikurir_riderapp"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "494419129982-0m8c4f8dnlo87b05d24118viadlj04cj.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCOWTSyX59cqGrAgJKO1tzGE4rf2flw4Og"
+        },
+        {
+          "current_key": "AIzaSyA8-4j8h0sJHIc-tsusl4ct5W6yuDGmL_w"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "494419129982-0m8c4f8dnlo87b05d24118viadlj04cj.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:494419129982:android:2a105580672d77073c4a2f",
+        "android_client_info": {
+          "package_name": "com.kinikumuda.riderapp"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "494419129982-0m8c4f8dnlo87b05d24118viadlj04cj.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCOWTSyX59cqGrAgJKO1tzGE4rf2flw4Og"
+        },
+        {
+          "current_key": "AIzaSyA8-4j8h0sJHIc-tsusl4ct5W6yuDGmL_w"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "494419129982-0m8c4f8dnlo87b05d24118viadlj04cj.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
