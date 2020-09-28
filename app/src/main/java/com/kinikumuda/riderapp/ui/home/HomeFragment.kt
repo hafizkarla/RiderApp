@@ -97,7 +97,7 @@ class HomeFragment : Fragment(), OnMapReadyCallback, FirebaseDriverInfoListener 
     lateinit var iFirebaseDriverInfoListener: FirebaseDriverInfoListener
     lateinit var iFirebaseFailedListener: FirebaseFailedListener
 
-    var cityName=""
+    //var cityName=""
 
     //
     val compositeDisposable = CompositeDisposable()
