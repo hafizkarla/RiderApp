@@ -24,4 +24,14 @@
     <string name="choose_a_saved_place">Choose a saved place</string>
     <string name="city_name_not_found">City name not found</string>
     <string name="title_activity_request_driver">Map</string>
+    <string name="pay_by_cash">Pay by cash</string>
+    <string name="confirm_uber">Confirm Driver</string>
+    <string name="confirm_pickup_spot">Confirm pickup spot</string>
+    <string name="text_demo">Kumala Laggon</string>
+    <string name="confirm_pickup">Confirm pickup</string>
+    <string name="meet_driver_here">Meet driver here</string>
+    <string name="finding_your_ride">Finding your ride</string>
+    <string name="token_not_found">Token not found</string>
+    <string name="send_request_driver_failed">Request driver failed</string>
+    <string name="no_driver_accept">There are no driver accept your request</string>
 </resources>

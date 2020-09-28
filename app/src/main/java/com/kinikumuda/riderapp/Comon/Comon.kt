@@ -1,5 +1,6 @@
 package com.kinikumuda.riderapp.Comon
 
+import android.animation.ValueAnimator
 import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
@@ -24,10 +25,17 @@ import kotlin.collections.HashSet
 
 
 object Comon {
+    val DESTINATION_LOCATION: String="DestinationLocation"
+    val DESTINATION_LOCATION_STRING: String="DestinationLocationString"
+    val PICKUP_LOCATION_STRING: String="PickupLocationString"
+    val REQUEST_DRIVER_DECLINE: String?="Decline" //same as driver app
+    val RIDER_KEY: String="RiderKey"
+    val PICKUP_LOCATION: String="PickupLocation"
+    val REQUEST_DRIVER_TITLE: String="RequestDriver"
     val driversSubscribe: MutableMap<String, AnimationModel> = HashMap<String,AnimationModel>()
     val markerList: MutableMap<String, Marker> = HashMap<String, Marker>()
     val DRIVER_INFO_REFERENCE: String="DriverInfo"
-    val driversFound: MutableSet<DriverGeoModel> = HashSet<DriverGeoModel>()
+    val driversFound: MutableMap<String,DriverGeoModel> = HashMap<String,DriverGeoModel>()
     val DRIVERS_LOCATION_REFERENCES: String="DriverLocation"
     val TOKEN_REFERENCE: String="Token"
     var currentRider: RiderModel?=null
@@ -171,5 +179,16 @@ object Comon {
         return startAddress.substring(0,firstIndexComma)
 
     }
+
+    fun valueAnimate(duration: Int, listener: ValueAnimator.AnimatorUpdateListener): ValueAnimator {
+        val va=ValueAnimator.ofFloat(0f,100f)
+        va.duration=duration.toLong()
+        va.addUpdateListener(listener)
+        va.repeatCount=ValueAnimator.INFINITE
+        va.repeatMode=ValueAnimator.RESTART
+        va.start()
+        return va
+    }
+
 
 }

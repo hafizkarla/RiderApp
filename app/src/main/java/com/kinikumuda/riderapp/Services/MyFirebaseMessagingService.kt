@@ -5,6 +5,8 @@ import com.kinikumuda.riderapp.Utils.UserUtils
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.messaging.FirebaseMessagingService
 import com.google.firebase.messaging.RemoteMessage
+import com.kinikumuda.riderapp.Model.EventBus.DeclineRequestFromDriver
+import org.greenrobot.eventbus.EventBus
 import kotlin.random.Random
 
 class MyFirebaseMessagingService: FirebaseMessagingService() {
@@ -19,10 +21,17 @@ class MyFirebaseMessagingService: FirebaseMessagingService() {
         val data=remoteMessage.data
         if (data!=null)
         {
+            if(data[Comon.NOTI_TITLE] != null){
+                if (data[Comon.NOTI_TITLE].equals(Comon.REQUEST_DRIVER_DECLINE))
+                {
+                    EventBus.getDefault().postSticky(DeclineRequestFromDriver())
+
+                } else
             Comon.showNotification(this, Random.nextInt(),
                 data[Comon.NOTI_TITLE],
                 data[Comon.NOTI_BODY],
                 null)
+            }
         }
     }
 }

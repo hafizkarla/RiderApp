@@ -6,4 +6,6 @@
     <color name="lightGray">#ECECEC</color>
     <color name="blue">#5C9DC0</color>
     <color name="buttonSpace">#181C1F</color>
+    <color name="blue_uber">#2c6ff2</color>
+    <color name="map_darker">#66333333</color>
 </resources>

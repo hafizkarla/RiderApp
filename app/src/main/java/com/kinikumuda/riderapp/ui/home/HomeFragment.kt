@@ -82,9 +82,9 @@ class HomeFragment : Fragment(), OnMapReadyCallback, FirebaseDriverInfoListener 
     private lateinit var autocompleteSupportFragment: AutocompleteSupportFragment
 
     //location
-    lateinit var locationRequest:LocationRequest
-    lateinit var locationCallback: LocationCallback
-    lateinit var fusedLocationProviderClient:FusedLocationProviderClient
+     var locationRequest:LocationRequest?=null
+     var locationCallback: LocationCallback?=null
+     var fusedLocationProviderClient:FusedLocationProviderClient?=null
 
     //load drive
     var distance =1.0
@@ -113,7 +113,7 @@ class HomeFragment : Fragment(), OnMapReadyCallback, FirebaseDriverInfoListener 
     }
 
     override fun onDestroy() {
-        fusedLocationProviderClient.removeLocationUpdates(locationCallback)
+        fusedLocationProviderClient!!.removeLocationUpdates(locationCallback)
         super.onDestroy()
     }
     
@@ -126,12 +126,15 @@ class HomeFragment : Fragment(), OnMapReadyCallback, FirebaseDriverInfoListener 
         homeViewModel = ViewModelProvider(this).get(HomeViewModel::class.java)
         val root = inflater.inflate(R.layout.fragment_home, container, false)
 
-        init()
-        initViews(root)
 
         mapFragment = childFragmentManager
             .findFragmentById(R.id.map) as SupportMapFragment
         mapFragment.getMapAsync(this)
+
+
+
+        initViews(root)
+        init()
         return root
     }
 
@@ -153,10 +156,10 @@ class HomeFragment : Fragment(), OnMapReadyCallback, FirebaseDriverInfoListener 
         autocompleteSupportFragment.setOnPlaceSelectedListener(object:PlaceSelectionListener{
             override fun onPlaceSelected(p0: Place) {
                 if (ActivityCompat.checkSelfPermission(
-                        context!!,
+                        requireContext(),
                         Manifest.permission.ACCESS_FINE_LOCATION
                     ) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(
-                        context!!,
+                        requireContext(),
                         Manifest.permission.ACCESS_COARSE_LOCATION
                     ) != PackageManager.PERMISSION_GRANTED
                 ) {
@@ -176,7 +179,7 @@ class HomeFragment : Fragment(), OnMapReadyCallback, FirebaseDriverInfoListener 
             }
 
             override fun onError(p0: Status) {
-               Snackbar.make(requireView(),p0.statusMessage!!,Snackbar.LENGTH_LONG).show()
+               Snackbar.make(requireView(),""+p0.statusMessage!!,Snackbar.LENGTH_LONG).show()
             }
 
         })
@@ -186,39 +189,10 @@ class HomeFragment : Fragment(), OnMapReadyCallback, FirebaseDriverInfoListener 
 
 
         iFirebaseDriverInfoListener=this
-        locationRequest= LocationRequest()
-        locationRequest.setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY)
-        locationRequest.setFastestInterval(3000)
-        locationRequest.setSmallestDisplacement(10f)
-        locationRequest.interval=5000
 
-        locationCallback=object:LocationCallback(){
-            override fun onLocationResult(p0: LocationResult?) {
-                super.onLocationResult(p0)
-                val newPos= LatLng(p0!!.lastLocation.latitude,p0!!.lastLocation.longitude)
-                mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(newPos,18f))
 
-                //if use has change location, calculate and load driver again
-                if (firstTime){
-                    previousLocation=p0.lastLocation
-                    currentLocation=p0.lastLocation
 
-                    setRestrictPlacesInCountry(p0!!.lastLocation)
-                    firstTime=false
-
-                }
-                else{
-                    previousLocation=currentLocation
-                    currentLocation=p0.lastLocation
-                }
-
-                if(previousLocation!!.distanceTo(currentLocation)/1000 <= LIMIT_RANGE)
-                    loadAvailableDrivers();
-
-            }
-        }
-
-        fusedLocationProviderClient=LocationServices.getFusedLocationProviderClient(requireContext())
+        //add permission check
         if (ActivityCompat.checkSelfPermission(
                 requireContext(),
                 Manifest.permission.ACCESS_FINE_LOCATION
@@ -227,12 +201,78 @@ class HomeFragment : Fragment(), OnMapReadyCallback, FirebaseDriverInfoListener 
                 Manifest.permission.ACCESS_COARSE_LOCATION
             ) != PackageManager.PERMISSION_GRANTED
         ) {
-            //Snackbar.make(requireView(),getString(R.string.permission_require),Snackbar.LENGTH_SHORT).show()
+            Snackbar.make(mapFragment.requireView(),getString(R.string.permission_require),Snackbar.LENGTH_LONG).show()
+
             return
         }
-        fusedLocationProviderClient.requestLocationUpdates(locationRequest,locationCallback, Looper.myLooper())
+
+        buildLocationRequest()
+        buildLocationCallback()
+        updateLocation()
+
 
         loadAvailableDrivers();
+    }
+
+    private fun updateLocation() {
+        if (fusedLocationProviderClient==null)
+        {
+            fusedLocationProviderClient=LocationServices.getFusedLocationProviderClient(requireContext())
+            if (ActivityCompat.checkSelfPermission(
+                    requireContext(),
+                    Manifest.permission.ACCESS_FINE_LOCATION
+                ) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(
+                    requireContext(),
+                    Manifest.permission.ACCESS_COARSE_LOCATION
+                ) != PackageManager.PERMISSION_GRANTED
+            ) {
+                //Snackbar.make(requireView(),getString(R.string.permission_require),Snackbar.LENGTH_SHORT).show()
+                return
+            }
+            fusedLocationProviderClient!!.requestLocationUpdates(locationRequest,locationCallback, Looper.myLooper())
+        }
+    }
+
+    private fun buildLocationCallback() {
+        if (locationCallback==null)
+        {
+            locationCallback=object:LocationCallback(){
+                override fun onLocationResult(p0: LocationResult?) {
+                    super.onLocationResult(p0)
+                    val newPos= LatLng(p0!!.lastLocation.latitude,p0!!.lastLocation.longitude)
+                    mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(newPos,18f))
+
+                    //if use has change location, calculate and load driver again
+                    if (firstTime){
+                        previousLocation=p0.lastLocation
+                        currentLocation=p0.lastLocation
+
+                        setRestrictPlacesInCountry(p0!!.lastLocation)
+                        firstTime=false
+
+                    }
+                    else{
+                        previousLocation=currentLocation
+                        currentLocation=p0.lastLocation
+                    }
+
+                    if(previousLocation!!.distanceTo(currentLocation)/1000 <= LIMIT_RANGE)
+                        loadAvailableDrivers();
+
+                }
+            }
+        }
+    }
+
+    private fun buildLocationRequest() {
+        if (locationRequest==null)
+        {
+            locationRequest= LocationRequest()
+            locationRequest!!.setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY)
+            locationRequest!!.setFastestInterval(3000)
+            locationRequest!!.setSmallestDisplacement(10f)
+            locationRequest!!.interval=5000
+        }
     }
 
     private fun setRestrictPlacesInCountry(location: Location?) {
@@ -258,7 +298,7 @@ class HomeFragment : Fragment(), OnMapReadyCallback, FirebaseDriverInfoListener 
             Snackbar.make(requireView(),getString(R.string.permission_require),Snackbar.LENGTH_SHORT).show()
             return
         }
-        fusedLocationProviderClient.lastLocation
+        fusedLocationProviderClient!!.lastLocation
             .addOnFailureListener { e->
                 Snackbar.make(requireView(),e.message!!,Snackbar.LENGTH_SHORT).show()
             }
@@ -285,7 +325,9 @@ class HomeFragment : Fragment(), OnMapReadyCallback, FirebaseDriverInfoListener 
 
                         geoQuery.addGeoQueryEventListener(object : GeoQueryEventListener {
                             override fun onKeyEntered(key: String?, location: GeoLocation?) {
-                                Comon.driversFound.add(DriverGeoModel(key!!, location!!))
+                                //Comon.driversFound.add(DriverGeoModel(key!!, location!!))
+                                if (!Comon.driversFound.containsKey(key))
+                                    Comon.driversFound[key!!]=DriverGeoModel(key,location)
                             }
 
                             override fun onKeyExited(key: String?) {
@@ -359,12 +401,12 @@ class HomeFragment : Fragment(), OnMapReadyCallback, FirebaseDriverInfoListener 
     private fun addDriverMarker() {
         if (Comon.driversFound.size > 0)
         {
-                Observable.fromIterable(Comon.driversFound)
+                Observable.fromIterable(Comon.driversFound.keys)
                     .subscribeOn(Schedulers.newThread())
                     .observeOn(AndroidSchedulers.mainThread())
                     .subscribe({
-                        driverGeoModel:DriverGeoModel? ->
-                        findDriverByKey(driverGeoModel)
+                        key:String? ->
+                        findDriverByKey(Comon.driversFound[key!!])
                     },
                         {
                             t:Throwable? -> Snackbar.make(requireView(),t!!.message!!,Snackbar.LENGTH_SHORT).show()
@@ -387,6 +429,7 @@ class HomeFragment : Fragment(), OnMapReadyCallback, FirebaseDriverInfoListener 
                     if (p0.hasChildren())
                     {
                         driverGeoModel.driverInfoModel = (p0.getValue(DriverInfoModel::class.java))
+                        Comon.driversFound[driverGeoModel.key!!]!!.driverInfoModel=(p0.getValue(DriverInfoModel::class.java))
                         iFirebaseDriverInfoListener.onDriverInfoLoadSuccess(driverGeoModel)
 
                     }
@@ -422,7 +465,7 @@ class HomeFragment : Fragment(), OnMapReadyCallback, FirebaseDriverInfoListener 
                     mMap.isMyLocationEnabled=true
                     mMap.uiSettings.isMyLocationButtonEnabled=true
                     mMap.setOnMyLocationButtonClickListener {
-                        fusedLocationProviderClient.lastLocation
+                        fusedLocationProviderClient!!.lastLocation
                             .addOnFailureListener { e->
                                 Snackbar.make(requireView(),e.message!!,
                                     Snackbar.LENGTH_LONG).show()
@@ -440,6 +483,11 @@ class HomeFragment : Fragment(), OnMapReadyCallback, FirebaseDriverInfoListener 
                     params.addRule(RelativeLayout.ALIGN_PARENT_TOP,0)
                     params.addRule(RelativeLayout.ALIGN_PARENT_BOTTOM,RelativeLayout.TRUE)
                     params.bottomMargin=250
+
+                    //update location
+                    buildLocationRequest()
+                    buildLocationCallback()
+                    updateLocation()
                 }
 
                 override fun onPermissionDenied(p0: PermissionDeniedResponse?) {
@@ -499,6 +547,10 @@ class HomeFragment : Fragment(), OnMapReadyCallback, FirebaseDriverInfoListener 
                         marker!!.remove() //remove marker from map
                         Comon.markerList.remove(driverGeoModel!!.key!!)//remove marker information
                         Comon.driversSubscribe.remove(driverGeoModel.key!!)  //remove driver information
+
+                        //fix error!! when driver decline request,they can accept again if they stop and open app again
+                        if (Comon.driversFound!=null && Comon.driversFound[driverGeoModel!!.key!!] != null)
+                            Comon.driversFound.remove(driverGeoModel!!.key!!)
                         driverLocation.removeEventListener(this)
 
                     }
