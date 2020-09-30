@@ -7,13 +7,18 @@ import android.app.NotificationManager
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
+import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.graphics.Color
+import android.graphics.drawable.ColorDrawable
 import android.os.Build
+import android.view.LayoutInflater
+import android.view.View
 import android.widget.TextView
 import androidx.core.app.NotificationCompat
 import com.google.android.gms.maps.model.LatLng
 import com.google.android.gms.maps.model.Marker
+import com.google.maps.android.ui.IconGenerator
 import com.kinikumuda.riderapp.Model.AnimationModel
 import com.kinikumuda.riderapp.Model.DriverGeoModel
 import com.kinikumuda.riderapp.Model.RiderModel
@@ -25,6 +30,9 @@ import kotlin.collections.HashSet
 
 
 object Comon {
+    val TRIP: String ="Trips" //same as firebase
+    val TRIP_KEY: String="TripKey"
+    val REQUEST_DRIVER_ACCEPT: String="Accept"
     val DESTINATION_LOCATION: String="DestinationLocation"
     val DESTINATION_LOCATION_STRING: String="DestinationLocationString"
     val PICKUP_LOCATION_STRING: String="PickupLocationString"
@@ -188,6 +196,20 @@ object Comon {
         va.repeatMode=ValueAnimator.RESTART
         va.start()
         return va
+    }
+
+    fun createIconWithDuration(context: Context, duration: String): Bitmap? {
+        val view=LayoutInflater.from(context).inflate(R.layout.pickup_info_with_duration_windows,null)
+        val txt_time = view.findViewById<View>(R.id.txt_duration) as TextView
+        txt_time.setText(getNumberFromText(duration!!))
+        val generator = IconGenerator(context)
+        generator.setContentView(view)
+        generator.setBackground(ColorDrawable(Color.TRANSPARENT))
+        return generator.makeIcon()
+    }
+
+    private fun getNumberFromText(s: String): String {
+        return s.substring(0,s.indexOf(" "))
     }
 
 

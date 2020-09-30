@@ -94,12 +94,12 @@ class HomeFragment : Fragment(), OnMapReadyCallback, FirebaseDriverInfoListener 
 
     var firstTime=true
     //Listener
-    lateinit var iFirebaseDriverInfoListener: FirebaseDriverInfoListener
-    lateinit var iFirebaseFailedListener: FirebaseFailedListener
+     private var iFirebaseDriverInfoListener: FirebaseDriverInfoListener?=null
+     private var iFirebaseFailedListener: FirebaseFailedListener?=null
 
     var cityName=""
 
-    //
+
     val compositeDisposable = CompositeDisposable()
     lateinit var iGoogleAPI: IGoogleAPI
 
@@ -179,7 +179,7 @@ class HomeFragment : Fragment(), OnMapReadyCallback, FirebaseDriverInfoListener 
             }
 
             override fun onError(p0: Status) {
-               Snackbar.make(requireView(),""+p0.statusMessage!!,Snackbar.LENGTH_LONG).show()
+   //           Snackbar.make(requireView(),"Error",Snackbar.LENGTH_LONG).show()
             }
 
         })
@@ -430,15 +430,15 @@ class HomeFragment : Fragment(), OnMapReadyCallback, FirebaseDriverInfoListener 
                     {
                         driverGeoModel.driverInfoModel = (p0.getValue(DriverInfoModel::class.java))
                         Comon.driversFound[driverGeoModel.key!!]!!.driverInfoModel=(p0.getValue(DriverInfoModel::class.java))
-                        iFirebaseDriverInfoListener.onDriverInfoLoadSuccess(driverGeoModel)
+                        iFirebaseDriverInfoListener!!.onDriverInfoLoadSuccess(driverGeoModel)
 
                     }
-                    else
-                        iFirebaseFailedListener.onFirebaseFailed(getString(R.string.key_not_found)+driverGeoModel.key)
+//                    else
+//                        iFirebaseFailedListener!!.onFirebaseFailed(getString(R.string.key_not_found)+driverGeoModel!!.key!!)
                 }
 
                 override fun onCancelled(p0: DatabaseError) {
-                    iFirebaseFailedListener.onFirebaseFailed(p0.message)
+                    iFirebaseFailedListener!!.onFirebaseFailed(p0.message)
                 }
 
 

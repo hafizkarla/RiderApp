@@ -2,13 +2,17 @@ package com.kinikumuda.riderapp
 
 import android.Manifest
 import android.animation.ValueAnimator
+import android.app.Activity
+import android.content.Intent
 import android.content.pm.PackageManager
 import android.graphics.BitmapFactory
 import android.graphics.Color
 import android.graphics.drawable.ColorDrawable
 import android.location.Location
+import android.net.Uri
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
+import android.os.Handler
 import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
@@ -17,7 +21,11 @@ import android.view.animation.LinearInterpolator
 import android.widget.RelativeLayout
 import android.widget.TextView
 import android.widget.Toast
+import androidx.core.app.ActivityCompat
+import androidx.core.content.ContentProviderCompat.requireContext
 import androidx.core.content.ContextCompat
+import com.bumptech.glide.Glide
+import android.content.Context
 
 import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.GoogleMap
@@ -25,11 +33,18 @@ import com.google.android.gms.maps.OnMapReadyCallback
 import com.google.android.gms.maps.SupportMapFragment
 import com.google.android.gms.maps.model.*
 import com.google.android.material.snackbar.Snackbar
+import com.google.firebase.database.DataSnapshot
+import com.google.firebase.database.DatabaseError
+import com.google.firebase.database.FirebaseDatabase
+import com.google.firebase.database.ValueEventListener
 import com.google.maps.android.ui.IconGenerator
 import com.kinikumuda.riderapp.Comon.Comon
 import com.kinikumuda.riderapp.Model.DriverGeoModel
 import com.kinikumuda.riderapp.Model.EventBus.DeclineRequestFromDriver
+import com.kinikumuda.riderapp.Model.EventBus.DriverAcceptTripEvent
 import com.kinikumuda.riderapp.Model.EventBus.SelectedPlaceEvent
+import com.kinikumuda.riderapp.Model.EventBus.TripFinished
+import com.kinikumuda.riderapp.Model.TripPlanModel
 import com.kinikumuda.riderapp.Remote.IGoogleAPI
 import com.kinikumuda.riderapp.Remote.RetrofitClient
 import com.kinikumuda.riderapp.Utils.UserUtils
@@ -39,6 +54,7 @@ import io.reactivex.schedulers.Schedulers
 import kotlinx.android.synthetic.main.activity_request_driver.*
 import kotlinx.android.synthetic.main.layout_confirm_pickup.*
 import kotlinx.android.synthetic.main.layout_confirm_uber.*
+import kotlinx.android.synthetic.main.layout_driver_info.*
 import kotlinx.android.synthetic.main.layout_finding_your_driver.*
 import kotlinx.android.synthetic.main.origin_info_windows.*
 import org.greenrobot.eventbus.EventBus
@@ -51,18 +67,30 @@ import java.lang.StringBuilder
 
 class RequestDriverActivity : AppCompatActivity(), OnMapReadyCallback {
 
+    private var driverOldPosition: String = ""
+    private var handler: Handler?=null
+    private var v=0f
+    private var lat=0.0
+    private var lng=0.0
+    private var index=0
+    private var next=0
+    private var start:LatLng?=null
+    private var end:LatLng?=null
+
+
     //spinning animation
-     var animator:ValueAnimator?=null
+    var animator:ValueAnimator?=null
     private val DESIRED_NUM_OF_SPINS = 5
     private val DESIRED_SECONDS_PER_ONE_FULL_360_SPIN=40
 
     //effect
-     var lastUserCircle:Circle?=null
+    var lastUserCircle:Circle?=null
     val duration =1000
-     var lastPulseAnimator:ValueAnimator?=null
+    var lastPulseAnimator:ValueAnimator?=null
 
     private lateinit var mMap: GoogleMap
     private lateinit var txt_origin:TextView
+
 
     private var selectedPlaceEvent:SelectedPlaceEvent?=null
 
@@ -84,6 +112,8 @@ class RequestDriverActivity : AppCompatActivity(), OnMapReadyCallback {
 
     private var lastDriverCall: DriverGeoModel?=null
 
+    private var phoneNumber:String?=""
+
 
 
 
@@ -100,8 +130,326 @@ class RequestDriverActivity : AppCompatActivity(), OnMapReadyCallback {
             EventBus.getDefault().removeStickyEvent(SelectedPlaceEvent::class.java)
         if (EventBus.getDefault().hasSubscriberForEvent(DeclineRequestFromDriver::class.java))
             EventBus.getDefault().removeStickyEvent(DeclineRequestFromDriver::class.java)
+        if (EventBus.getDefault().hasSubscriberForEvent(DriverAcceptTripEvent::class.java))
+            EventBus.getDefault().removeStickyEvent(DriverAcceptTripEvent::class.java)
+        if (EventBus.getDefault().hasSubscriberForEvent(TripFinished::class.java))
+            EventBus.getDefault().removeStickyEvent(TripFinished::class.java)
         EventBus.getDefault().unregister(this)
         super.onStop()
+    }
+
+    @Subscribe(sticky = true,threadMode = ThreadMode.MAIN)
+    fun onDriverAcceptTripEvent(event:DriverAcceptTripEvent)
+    {
+        FirebaseDatabase.getInstance().getReference(Comon.TRIP)
+            .child(event.tripId)
+            .addListenerForSingleValueEvent(object : ValueEventListener {
+                override fun onDataChange(p0: DataSnapshot) {
+                    if (p0.exists())
+
+                    {
+                        val tripPlanModel=p0.getValue(TripPlanModel::class.java)
+                        mMap.clear()
+                        fill_maps.visibility=View.GONE
+                        if (animator != null) animator!!.end()
+                        val cameraPos=CameraPosition.Builder().target(mMap.cameraPosition.target)
+                            .tilt(0f).zoom(mMap.cameraPosition.zoom).build()
+                        mMap.moveCamera(CameraUpdateFactory.newCameraPosition(cameraPos))
+
+                        //get routes
+                        val driverLocation=StringBuilder()
+                            .append(tripPlanModel!!.currentLat)
+                            .append(",")
+                            .append(tripPlanModel!!.currentLng)
+                            .toString()
+
+                        compositeDisposable.add(
+                            iGoogleAPI.getDirection("driving",
+                            "less_driving",
+                            tripPlanModel!!.destination,driverLocation,
+                            getString(R.string.google_api_key))!!
+                                .subscribeOn(Schedulers.io())
+                                .observeOn(AndroidSchedulers.mainThread())
+                                .subscribe{returnResult ->
+                                    var blackPolylineOptions:PolylineOptions?=null
+                                    var polylineList:List<LatLng?>?=null
+                                    var blackPolyline:Polyline?=null
+                                    try {
+
+                                        val jsonObject = JSONObject(returnResult)
+                                        val jsonArray = jsonObject.getJSONArray("routes");
+                                        for (i in 0 until jsonArray.length()) {
+                                            val route = jsonArray.getJSONObject(i)
+                                            val poly = route.getJSONObject("overview_polyline")
+                                            val polyline = poly.getString("points")
+                                            polylineList = Comon.decodePoly(polyline)
+
+                                        }
+
+
+                                        blackPolylineOptions = PolylineOptions()
+                                        blackPolylineOptions!!.color(Color.BLACK)
+                                        blackPolylineOptions!!.width(5f)
+                                        blackPolylineOptions!!.startCap(SquareCap())
+                                        blackPolylineOptions!!.jointType(JointType.ROUND)
+                                        blackPolylineOptions!!.addAll(polylineList)
+                                        blackPolyline = mMap.addPolyline(blackPolylineOptions)
+
+
+
+                                        //add car icon for origin
+                                        val objects = jsonArray.getJSONObject(0)
+                                        val legs = objects.getJSONArray("legs")
+                                        val legsObject = legs.getJSONObject(0)
+
+                                        val time = legsObject.getJSONObject("duration")
+                                        val duration = time.getString("text")
+
+                                       val origin=LatLng(tripPlanModel!!.origin!!.split(",").get(0).toDouble(),
+                                           tripPlanModel!!.origin!!.split(",").get(1).toDouble())
+                                        val destination=LatLng(tripPlanModel.currentLat,tripPlanModel.currentLng)
+
+                                        btn_call_driver.setOnClickListener {
+                                            checkPermission()
+                                        }
+
+                                        val latLngBound = LatLngBounds.Builder()
+                                            .include(origin)
+                                            .include(destination)
+                                            .build()
+
+                                        addPickupMarkerWithDuration(duration,origin)
+                                        addDriverMarker(destination)
+
+
+
+
+                                        mMap.moveCamera(CameraUpdateFactory.newLatLngBounds(latLngBound, 160))
+                                        mMap.moveCamera(CameraUpdateFactory.zoomTo(mMap.cameraPosition!!.zoom - 1))
+
+                                        initDriverForMoving(event.tripId,tripPlanModel)
+                                        //load driver avatar
+                                        Glide.with(this@RequestDriverActivity)
+                                            .load(tripPlanModel.driverInfoModel!!.avatar!!)
+                                            .into(img_driver)
+                                        txt_driver_name.setText(tripPlanModel!!.driverInfoModel!!.firstName+" "+tripPlanModel!!.driverInfoModel!!.lastName)
+                                        txt_car_type.setText(tripPlanModel!!.driverInfoModel!!.motorType)
+                                        txt_phone_number.setText(tripPlanModel!!.driverInfoModel!!.phoneNumber)
+                                        txt_vehicle_number.setText(tripPlanModel!!.driverInfoModel!!.vehicleLicenseNumber)
+                                        phoneNumber=tripPlanModel.driverInfoModel!!.phoneNumber
+
+                                        confirm_uber_layout.visibility=View.GONE
+                                        confirm_pickup_layout.visibility=View.GONE
+                                        driver_info_layout.visibility=View.VISIBLE
+
+
+
+                                    } catch (e: java.lang.Exception) {
+                                        Toast.makeText(this@RequestDriverActivity, e.message!!, Toast.LENGTH_SHORT).show()
+                                    }
+                                }
+                        )
+
+
+
+
+
+                    }
+                    else
+                        Snackbar.make(main_layout,getString(R.string.trip_not_found)+event.tripId,Snackbar.LENGTH_LONG).show()
+                }
+
+                override fun onCancelled(p0: DatabaseError) {
+                    Snackbar.make(main_layout,p0.message,Snackbar.LENGTH_LONG).show()
+
+                }
+
+            })
+    }
+
+    private fun tripFinish() {
+
+        val tripPlanModel = TripPlanModel()
+        if (!tripPlanModel!!.isDone) {
+            driver_info_layout.visibility = View.GONE
+            mMap.clear()
+            Toast.makeText(
+                this@RequestDriverActivity,
+                "Your package has been arived!",
+                Toast.LENGTH_LONG
+            ).show()
+        }
+        else
+            Toast.makeText(
+                this@RequestDriverActivity,
+                "belum sampai",
+                Toast.LENGTH_LONG
+            ).show()
+    }
+
+    fun checkPermission() {
+        if (ContextCompat.checkSelfPermission(this@RequestDriverActivity,
+                Manifest.permission.CALL_PHONE)
+            != PackageManager.PERMISSION_GRANTED) {
+
+            // Permission is not granted
+            // Should we show an explanation?
+            if (ActivityCompat.shouldShowRequestPermissionRationale(
+                    this@RequestDriverActivity,
+                    Manifest.permission.CALL_PHONE)) {
+                // Show an explanation to the user *asynchronously* -- don't block
+                // this thread waiting for the user's response! After the user
+                // sees the explanation, try again to request the permission.
+            } else {
+                // No explanation needed, we can request the permission.
+                ActivityCompat.requestPermissions(
+                    this@RequestDriverActivity,
+                    arrayOf(Manifest.permission.CALL_PHONE),
+                    42)
+            }
+        } else {
+            // Permission has already been granted
+            callPhone()
+        }
+    }
+    fun callPhone(){
+        val intent = Intent(Intent.ACTION_CALL, Uri.parse("tel:$phoneNumber"))
+        startActivity(intent)
+    }
+
+
+    private fun initDriverForMoving(tripId: String, tripPlanModel: TripPlanModel) {
+        driverOldPosition= StringBuilder().append(tripPlanModel.currentLat)
+            .append(",").append(tripPlanModel.currentLng).toString()
+
+        FirebaseDatabase.getInstance().getReference(Comon.TRIP)
+            .child(tripId)
+            .addValueEventListener(object :ValueEventListener{
+                override fun onDataChange(p0: DataSnapshot) {
+                    val newData = p0.getValue(TripPlanModel::class.java)
+                    val driverNewPosition=StringBuilder().append(newData!!.currentLat)
+                        .append(",").append(newData!!.currentLng).toString()
+                    if (!driverOldPosition.equals(driverNewPosition)) //not equals
+                        moveMarkerAnimation(destinationMarker!!,driverOldPosition,driverNewPosition)
+                }
+
+                override fun onCancelled(p0: DatabaseError) {
+                    Snackbar.make(main_layout,p0.message,Snackbar.LENGTH_LONG).show()
+                }
+
+            })
+
+    }
+
+    private fun moveMarkerAnimation(marker: Marker, from: String, to: String) {
+
+        compositeDisposable.add(
+            iGoogleAPI.getDirection("driving",
+                "less_driving",
+                from,to,
+                getString(R.string.google_api_key))!!
+                .subscribeOn(Schedulers.io())
+                .observeOn(AndroidSchedulers.mainThread())
+                .subscribe{returnResult ->
+                    try {
+
+                        val jsonObject = JSONObject(returnResult)
+                        val jsonArray = jsonObject.getJSONArray("routes");
+                        for (i in 0 until jsonArray.length()) {
+                            val route = jsonArray.getJSONObject(i)
+                            val poly = route.getJSONObject("overview_polyline")
+                            val polyline = poly.getString("points")
+                            polylineList = Comon.decodePoly(polyline)
+
+                        }
+
+
+                        blackPolylineOptions = PolylineOptions()
+                        blackPolylineOptions!!.color(Color.BLACK)
+                        blackPolylineOptions!!.width(5f)
+                        blackPolylineOptions!!.startCap(SquareCap())
+                        blackPolylineOptions!!.jointType(JointType.ROUND)
+                        blackPolylineOptions!!.addAll(polylineList)
+                        blackPolyLine = mMap.addPolyline(blackPolylineOptions)
+
+
+
+                        //add car icon for origin
+                        val objects = jsonArray.getJSONObject(0)
+                        val legs = objects.getJSONArray("legs")
+                        val legsObject = legs.getJSONObject(0)
+
+                        val time = legsObject.getJSONObject("duration")
+                        val duration = time.getString("text")
+
+                        val bitmap=Comon.createIconWithDuration(this@RequestDriverActivity,duration)
+                        originMarker!!.setIcon(BitmapDescriptorFactory.fromBitmap(bitmap))
+
+                        //moving
+                        val runnable=object:Runnable{
+                            override fun run() {
+                                if (index<polylineList!!.size -2)
+                                {
+                                    index++
+                                    next=index+1
+                                    start=polylineList!![index]
+                                    end=polylineList!![next]
+                                }
+                                val valueAnimator=ValueAnimator.ofInt(0,1)
+                                valueAnimator.duration=1500
+                                valueAnimator.interpolator=LinearInterpolator()
+                                valueAnimator.addUpdateListener { valueAnimatorNew->
+                                    v=valueAnimatorNew.animatedFraction
+                                    lat=v*end!!.latitude+(1-v)*start!!.latitude
+                                    lng=v*end!!.longitude+(1-v)*end!!.longitude
+                                    val newPos=LatLng(lat,lng)
+                                    marker.position=newPos
+                                    marker.setAnchor(0.5f,0.5f)
+                                    marker.rotation=Comon.getBearing(start!!,newPos)
+                                    mMap.moveCamera(CameraUpdateFactory.newLatLng(newPos))
+
+                                }
+                                valueAnimator.start()
+                                if (index<polylineList!!.size -2) handler!!.postDelayed(this,1500)
+                            }
+
+                        }
+                        handler=Handler()
+                        index=-1
+                        next=1
+                        handler!!.postDelayed(runnable,1500)
+                        driverOldPosition=to //set new driver position
+
+
+                    } catch (e: java.lang.Exception) {
+                        Toast.makeText(this@RequestDriverActivity, e.message!!, Toast.LENGTH_SHORT).show()
+                    }
+                }
+        )
+    }
+
+    private fun addDriverMarker(destination: LatLng) {
+        destinationMarker=mMap.addMarker(MarkerOptions().position(destination).flat(true)
+            .icon(BitmapDescriptorFactory.fromResource(R.drawable.car)))
+
+    }
+
+    private fun addPickupMarkerWithDuration(duration: String, origin: LatLng) {
+        val icon=Comon.createIconWithDuration(this@RequestDriverActivity,duration)!!
+        originMarker=mMap.addMarker(MarkerOptions().icon(BitmapDescriptorFactory.fromBitmap(icon)).position(origin))
+
+    }
+
+    @Subscribe(sticky = true,threadMode = ThreadMode.MAIN)
+    fun onDoneReceived(event:TripFinished)
+    {
+        driver_info_layout.visibility=View.GONE
+        lastDriverCall=null
+        mMap.clear()
+        finish()
+            Comon.driversFound.get(lastDriverCall!!.key)!!.isDone=true
+//            Toast.makeText(this,"Done",Toast.LENGTH_LONG).show()
+
     }
 
     @Subscribe(sticky = true,threadMode = ThreadMode.MAIN)
@@ -170,6 +518,7 @@ class RequestDriverActivity : AppCompatActivity(), OnMapReadyCallback {
             .position(selectedPlaceEvent!!.origin))
 
         addPulsatingEffect(selectedPlaceEvent!!)
+
     }
 
     private fun addPulsatingEffect(selectedPlaceEvent: SelectedPlaceEvent) {
@@ -188,7 +537,7 @@ class RequestDriverActivity : AppCompatActivity(), OnMapReadyCallback {
 
         })
 
-            //start rotating camera
+        //start rotating camera
         startMapCameraSpinningAnimation(selectedPlaceEvent)
     }
 
@@ -320,7 +669,7 @@ class RequestDriverActivity : AppCompatActivity(), OnMapReadyCallback {
 
         try {
             val success=googleMap.setMapStyle(MapStyleOptions.loadRawResourceStyle(this,
-            R.raw.uber_maps_style))
+                R.raw.uber_maps_style))
             if (!success)
                 Snackbar.make(mapFragment.requireView(),"Load map style failed",Snackbar.LENGTH_LONG).show()
         }catch (e:Exception)

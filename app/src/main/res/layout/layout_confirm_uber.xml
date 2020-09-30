@@ -34,7 +34,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_gravity="center_vertical"
-                android:text="@string/pay_by_cash"
+                android:text="@string/pay_by_app"
                 android:textColor="#737373"
                 android:textSize="16dp"/>
 

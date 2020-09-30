@@ -103,11 +103,11 @@ class HomeActivity : AppCompatActivity() {
         txt_name.setText(Comon.buildWelcomMessage())
         txt_phone.setText(Comon.currentRider!!.phoneNumber)
 
-        if (Comon.currentRider !=null &&Comon.currentRider!!.avatar !=null && TextUtils.isEmpty(Comon.currentRider!!.avatar))
+        if (Comon.currentRider !=null && Comon.currentRider!!.avatar !=null)
         {
             Glide.with(this)
-                .load(Comon.currentRider!!.avatar)
-                .into(img_avatar)
+                .load(Comon.currentRider!!.avatar!!)
+                .into(img_avatar!!)
         }
         img_avatar.setOnClickListener{
             val intent= Intent()
@@ -122,11 +122,14 @@ class HomeActivity : AppCompatActivity() {
         super.onActivityResult(requestCode, resultCode, data)
         if (requestCode == PICK_IMAGE_REQUEST && resultCode == Activity.RESULT_OK)
         {
+
             if (data != null && data.data!=null)
                 imageUri=data.data
-            img_avatar.setImageURI(imageUri)
-
+            img_avatar.setImageURI(imageUri!!)
             showDialogUpload()
+
+
+
 
         }
     }

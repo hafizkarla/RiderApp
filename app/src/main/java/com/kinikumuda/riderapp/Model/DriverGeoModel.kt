@@ -7,6 +7,7 @@ class DriverGeoModel {
     var geoLocation: GeoLocation?=null
     var driverInfoModel:DriverInfoModel?=null
     var isDecline:Boolean=false
+    var isDone:Boolean=false
 
     constructor(key:String?,geoLocation:GeoLocation?){
         this.key=key

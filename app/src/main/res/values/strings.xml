@@ -34,4 +34,9 @@
     <string name="token_not_found">Token not found</string>
     <string name="send_request_driver_failed">Request driver failed</string>
     <string name="no_driver_accept">There are no driver accept your request</string>
+    <string name="trip_not_found">Cannot find trip with key</string>
+    <string name="motor_type">Aerox</string>
+    <string name="car_number_example">B 1234 BEW</string>
+    <string name="driver_name_example">Deen Snuts</string>
+    <string name="pay_by_app">Already payed by app</string>
 </resources>
